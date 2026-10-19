@@ -143,13 +143,19 @@
         <form id="uploadForm" class="space-y-2.5">
           <input type="text" id="itemName" placeholder="ပစ္စည်းအမည်" required class="field">
           <textarea id="itemCaption" placeholder="Caption (ဖော်ပြချက်/အသေးစိတ်)" rows="2" class="field"></textarea>
-          <label class="flex items-center gap-3 border-2 border-dashed border-red-200 rounded-2xl p-3 cursor-pointer hover:bg-red-50 transition">
+          <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+            <button type="button" id="imgModeFile" onclick="setImgMode('file')" class="py-1.5 rounded-lg"><i class="fa-solid fa-image mr-1"></i>ဖုန်းထဲမှ ပုံ</button>
+            <button type="button" id="imgModeUrl" onclick="setImgMode('url')" class="py-1.5 rounded-lg"><i class="fa-solid fa-link mr-1"></i>URL ဖြင့်</button>
+          </div>
+          <div class="flex items-center gap-3 border-2 border-dashed border-red-200 rounded-2xl p-3">
             <div id="uploadPreviewBox" class="w-14 h-14 rounded-xl bg-red-50 flex items-center justify-center overflow-hidden shrink-0">
               <i class="fa-solid fa-camera text-red-400 text-lg"></i>
             </div>
-            <div class="text-[11px] text-slate-500"><span class="font-semibold text-red-600">ဓာတ်ပုံရွေးရန်</span><br><span id="fileNameLabel">ပုံကို အလိုအလျောက် ချုံ့ပေးပါမည်</span></div>
-            <input type="file" id="itemFile" accept="image/*" required class="hidden">
-          </label>
+            <label id="fileBox" class="flex-1 text-[11px] text-slate-500 cursor-pointer"><span class="font-semibold text-red-600">ဓာတ်ပုံရွေးရန်</span><br><span id="fileNameLabel">ပုံကို အလိုအလျောက် ချုံ့ပေးပါမည်</span>
+              <input type="file" id="itemFile" accept="image/*" class="hidden">
+            </label>
+            <div id="urlBox" class="flex-1 hidden"><input type="url" id="itemUrl" placeholder="https://.../image.jpg" class="field" inputmode="url"></div>
+          </div>
           <button type="submit" id="uploadBtn" class="w-full hero text-white py-2.5 rounded-xl font-bold text-xs shadow active:scale-[.98] transition"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>တင်မည်</button>
         </form>
       </div>
@@ -180,9 +186,7 @@
         </div>
         <div class="pt-2 text-center">
           <p class="text-xs font-semibold text-slate-700 mb-2">ဆက်သွယ်ရန် (Telegram)</p>
-          <a href="https://t.me/KimYiDo" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-[#229ED9] text-white px-5 py-2.5 rounded-full font-bold text-xs shadow hover:opacity-95 transition">
-            <i class="fa-brands fa-telegram text-base"></i> @KimYiDo သို့ ဆက်သွယ်ရန်
-          </a>
+          <a href="https://t.me/KimYiDo" target="_blank" rel="noopener noreferrer" aria-label="Telegram" class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#229ED9] text-white shadow-md active:scale-95 transition"><i class="fa-brands fa-telegram text-3xl"></i></a>
         </div>
         <button onclick="switchView('feed')" class="w-full bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold text-xs mt-2">ပင်မစာမျက်နှာသို့ ပြန်ရန်</button>
       </div>
@@ -217,12 +221,8 @@
       <button onclick="toggleSidebar(false)" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="p-4 space-y-2 flex-1 overflow-y-auto">
-      <button onclick="toggleSidebar(false); switchView('feed')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-boxes-stacked text-red-600 w-5"></i> ပင်မ Feed</button>
-      <button onclick="toggleSidebar(false); switchView('notification')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-bell text-amber-500 w-5"></i> အကြောင်းကြားချက်များ</button>
-      <button onclick="toggleSidebar(false); goToMyProfile()" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-user text-red-600 w-5"></i> My Profile</button>
-      <hr class="my-2 border-slate-100">
       <button onclick="toggleSidebar(false); switchView('about')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-circle-info text-blue-600 w-5"></i> About (အကြောင်းအရာ)</button>
-      <a href="https://t.me/KimYiDo" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-brands fa-telegram text-[#229ED9] w-5"></i> ဆက်သွယ်ရန် (@KimYiDo)</a>
+      <a href="https://t.me/KimYiDo" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-brands fa-telegram text-[#229ED9] w-5"></i> ဆက်သွယ်ရန်</a>
     </div>
     <div class="p-4 border-t border-slate-100 text-center text-[10px] text-slate-400">
       DS Net © 2026<br>Founder: Aung Kaung Myat<br>Co-founder: Soe Wai Yan Htet
@@ -282,6 +282,7 @@
       <div><label class="block text-[11px] font-semibold mb-1">ပစ္စည်းအမည်</label><input type="text" id="editItemNameInput" class="field"></div>
       <div><label class="block text-[11px] font-semibold mb-1">Caption</label><textarea id="editItemCaptionInput" rows="2" class="field"></textarea></div>
       <div><label class="block text-[11px] font-semibold mb-1">ဓာတ်ပုံအသစ် (မလဲလိုလျှင် မထည့်ရ)</label><input type="file" id="editItemFileInput" accept="image/*" class="field"></div>
+      <div><label class="block text-[11px] font-semibold mb-1">သို့မဟုတ် ပုံ URL အသစ်</label><input type="url" id="editItemUrlInput" class="field" placeholder="https://..."></div>
       <div class="flex gap-2 pt-1">
         <button onclick="saveItemChanges()" class="flex-1 hero text-white py-2.5 rounded-xl font-bold text-xs">သိမ်းမည်</button>
         <button onclick="closeEditItemModal()" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-xs">ပိတ်မည်</button>
@@ -293,6 +294,7 @@
     <div class="sheet bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3">
       <h3 class="font-bold text-sm text-red-800"><i class="fa-solid fa-user-gear mr-1"></i>Profile ပြင်ဆင်ရန်</h3>
       <div class="flex items-center gap-3"><img id="editAvatarPrev" class="w-20 h-20 rounded-full object-cover border-2 border-red-200 bg-slate-100" alt=""><div class="flex-1"><label class="block text-[11px] font-semibold mb-1">Profile Picture</label><input type="file" id="editAvatarFile" accept="image/*" class="field"></div></div>
+      <div><label class="block text-[11px] font-semibold mb-1">အမည် (Name)</label><input type="text" id="editName" class="field" maxlength="40"></div>
       <div class="grid grid-cols-2 gap-2">
         <div><label class="block text-[11px] font-semibold mb-1">တိုင်း/ပြည်နယ်</label><select id="editRegion" class="field" onchange="fillTownSelect()"></select></div>
         <div><label class="block text-[11px] font-semibold mb-1">မြို့</label><select id="editTown" class="field"></select></div>
@@ -346,7 +348,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_9Zz7p0FaGQwOHkGWdMMung_Xc5wNycl';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ================= STATE & HELPERS ================= */
-const DAY = 86400000, LIFE = 3, MAX_ITEMS = 16;
+const DAY = 86400000, LIFE = 3, NOTIF_LIFE = 2, MAX_SHOP = 6, MAX_AGENT = 16;
+const maxFor = role => role === 'shop' ? MAX_SHOP : MAX_AGENT;
+let imgMode = 'file';
 const REGIONS = {
   'ရန်ကုန်တိုင်း': ['ရန်ကုန်မြို့', 'ဒဂုံမြို့', 'မရမ်းကုန်းမြို့', 'အင်းစိန်မြို့', 'သင်္ဃန်းကျွန်းမြို့', 'လှိုင်သာယာမြို့', 'သာကေတမြို့', 'ထန်လျင်မြို့', 'ဒလမြို့'],
   'မွန်ပြည်နယ်': ['မော်လမြိုင်မြို့', 'ဘီးလင်းမြို့', 'ချောင်းဆုံမြို့', 'သထုံမြို့', 'ရေးမြို့', 'မုဒုံမြို့', 'ကျိုက်ထိုမြို့', 'သံဖြူဇရပ်မြို့', 'ပေါင်မြို့', 'ကျိုက်မရောမြို့']
@@ -418,6 +422,22 @@ function fileToDataURL(file, max = 800, q = .8) {
   });
 }
 
+function isHttpUrl(u) { try { const x = new URL(u); return x.protocol === 'http:' || x.protocol === 'https:'; } catch { return false; } }
+function setImgMode(m) {
+  imgMode = m;
+  $('fileBox').classList.toggle('hidden', m !== 'file');
+  $('urlBox').classList.toggle('hidden', m !== 'url');
+  $('imgModeFile').className = 'py-1.5 rounded-lg ' + (m === 'file' ? 'bg-white text-red-700 shadow' : 'text-slate-500');
+  $('imgModeUrl').className = 'py-1.5 rounded-lg ' + (m === 'url' ? 'bg-white text-red-700 shadow' : 'text-slate-500');
+  showUploadPreview();
+}
+function showUploadPreview() {
+  const src = imgMode === 'file' ? pendingImg : ($('itemUrl').value.trim());
+  $('uploadPreviewBox').innerHTML = src && (imgMode === 'file' || isHttpUrl(src))
+    ? `<img src="${esc(src)}" class="w-full h-full object-cover" alt="" onerror="this.parentNode.innerHTML='<i class=&quot;fa-solid fa-triangle-exclamation text-amber-500&quot;></i>'">`
+    : '<i class="fa-solid fa-camera text-red-400 text-lg"></i>';
+}
+
 /* ================= TOAST / CONFIRM ================= */
 function toast(msg, type = 'ok') {
   const el = document.createElement('div');
@@ -467,7 +487,11 @@ async function fetchAllData() {
     if (followsRes.error) console.warn(followsRes.error);
     if (notifsRes.error) console.warn(notifsRes.error);
 
-    const allItems = itemsRes.data || [];
+    const now = Date.now();
+    const rawItems = itemsRes.data || [];
+    const expItems = rawItems.filter(i => now - Number(i.timestamp) >= LIFE * DAY);
+    if (expItems.length) supabaseClient.from('items').delete().in('id', expItems.map(i => i.id)).then(() => {}, () => {});
+    const allItems = rawItems.filter(i => now - Number(i.timestamp) < LIFE * DAY);
     cachedItems.shopRequests = allItems.filter(i => i.key === 'shopRequests');
     cachedItems.agentListings = allItems.filter(i => i.key === 'agentListings');
 
@@ -475,7 +499,10 @@ async function fetchAllData() {
     (profilesRes.data || []).forEach(p => { cachedProfiles[p.name] = p; });
 
     cachedFollows = followsRes.data || [];
-    cachedNotifications = notifsRes.data || [];
+    const rawNotifs = notifsRes.data || [];
+    const expNotifs = rawNotifs.filter(n => now - Number(n.timestamp) >= NOTIF_LIFE * DAY);
+    if (expNotifs.length) supabaseClient.from('notifications').delete().in('id', expNotifs.map(n => n.id)).then(() => {}, () => {});
+    cachedNotifications = rawNotifs.filter(n => now - Number(n.timestamp) < NOTIF_LIFE * DAY);
 
     updateNotificationBadge();
     applyFilters();
@@ -523,7 +550,7 @@ async function checkUserSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     const userMeta = session.user.user_metadata;
-    const name = userMeta.full_name || session.user.email.split('@')[0];
+    const name = userMeta.display_name || userMeta.full_name || session.user.email.split('@')[0];
     const email = session.user.email;
     
     let p = cachedProfiles[name];
@@ -869,7 +896,7 @@ function renderProfileWall(name) {
   $('formTitle').innerHTML = isShop
     ? '<i class="fa-solid fa-cloud-arrow-up text-red-600 mr-1"></i>လိုအပ်သော ပစ္စည်း တင်မည်'
     : '<i class="fa-solid fa-cloud-arrow-up text-emerald-600 mr-1"></i>ပစ္စည်းအသစ် တင်မည်';
-  $('quotaBadge').textContent = `${items.length}/${MAX_ITEMS}`;
+  $('quotaBadge').textContent = `${items.length}/${maxFor(p.role)}`;
 
   $('userWallList').innerHTML = items.length ? items.map(item => `
     <article class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
@@ -900,36 +927,49 @@ $('userWallList').addEventListener('click', e => {
 /* Upload */
 $('itemFile').addEventListener('change', async e => {
   const f = e.target.files[0];
-  if (!f) { pendingImg = null; return; }
+  if (!f) { pendingImg = null; showUploadPreview(); return; }
   $('fileNameLabel').textContent = f.name;
-  pendingImg = await fileToDataURL(f);
-  $('uploadPreviewBox').innerHTML = `<img src="${pendingImg}" class="w-full h-full object-cover" alt="">`;
+  try { pendingImg = await fileToDataURL(f, 700, .72); }
+  catch (err) { pendingImg = null; toast('ပုံဖတ်၍မရပါ', 'error'); }
+  showUploadPreview();
 });
+$('itemUrl').addEventListener('input', showUploadPreview);
 
 $('uploadForm').addEventListener('submit', async e => {
   e.preventDefault();
   if (!currentUser) return;
-  if (!pendingImg) { toast('ကျေးဇူးပြု၍ ပုံထည့်ပါ', 'error'); return; }
+  let imgSrc = null;
+  if (imgMode === 'url') {
+    imgSrc = $('itemUrl').value.trim();
+    if (!isHttpUrl(imgSrc)) { toast('မှန်ကန်သော ပုံ URL (https://...) ထည့်ပါ', 'error'); return; }
+  } else {
+    imgSrc = pendingImg;
+    if (!imgSrc) { toast('ကျေးဇူးပြု၍ ပုံထည့်ပါ', 'error'); return; }
+  }
   const key = keyOf(currentUser.role);
   const myItems = (cachedItems[key] || []).filter(i => i.name === currentUser.name);
-  if (myItems.length >= MAX_ITEMS) { toast(`အများဆုံး ${MAX_ITEMS} ပုံသာ တင်ခွင့်ရှိပါသည်`, 'error'); return; }
+  const lim = maxFor(currentUser.role);
+  if (myItems.length >= lim) { toast(`အများဆုံး ${lim} မျိုးသာ တင်ခွင့်ရှိပါသည်`, 'error'); return; }
   
+  const upBtn = $('uploadBtn'); upBtn.disabled = true;
   const newItem = {
     key: key,
     name: currentUser.name,
     item: $('itemName').value.trim(),
     caption: $('itemCaption').value.trim(),
-    img: pendingImg,
+    img: imgSrc,
     timestamp: Date.now(),
     orderedBy: null
   };
 
   const { error } = await supabaseClient.from('items').insert([newItem]);
+  upBtn.disabled = false;
   if (error) {
-    toast('တင်၍မရပါ။ ထပ်ကြိုးစားပါ', 'error');
+    console.error('Upload error:', error);
+    toast('တင်၍မရပါ: ' + (error.message || 'ထပ်ကြိုးစားပါ'), 'error');
   } else {
     e.target.reset(); pendingImg = null;
-    $('uploadPreviewBox').innerHTML = '<i class="fa-solid fa-camera text-red-400 text-lg"></i>';
+    showUploadPreview();
     $('fileNameLabel').textContent = 'ပုံကို အလိုအလျောက် ချုံ့ပေးပါမည်';
     await fetchAllData();
     renderProfileWall(currentUser.name);
@@ -952,7 +992,7 @@ async function deleteItem(key, id) {
 function openEditItemModal(key, id, name, caption) {
   $('editItemKey').value = key; $('editItemTimestamp').value = id;
   $('editItemNameInput').value = name; $('editItemCaptionInput').value = caption;
-  $('editItemFileInput').value = ''; show('editItemModal');
+  $('editItemFileInput').value = ''; $('editItemUrlInput').value = ''; show('editItemModal');
 }
 function closeEditItemModal() { hide('editItemModal'); }
 
@@ -966,11 +1006,16 @@ async function saveItemChanges() {
     caption: $('editItemCaptionInput').value.trim()
   };
   const f = $('editItemFileInput').files[0];
-  if (f) updateData.img = await fileToDataURL(f);
+  const u = $('editItemUrlInput').value.trim();
+  if (f) updateData.img = await fileToDataURL(f, 700, .72);
+  else if (u) {
+    if (!isHttpUrl(u)) { toast('မှန်ကန်သော ပုံ URL ထည့်ပါ', 'error'); return; }
+    updateData.img = u;
+  }
 
   const { error } = await supabaseClient.from('items').update(updateData).eq('id', id);
   if (error) {
-    toast('ပြင်ဆင်၍မရပါ', 'error');
+    toast('ပြင်ဆင်၍မရပါ: ' + (error.message || ''), 'error');
   } else {
     closeEditItemModal();
     await fetchAllData();
@@ -984,8 +1029,8 @@ function openEditProfileModal() {
   const p = getProfile(currentUser.name);
   $('editRegion').innerHTML = Object.keys(REGIONS).map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   $('editRegion').value = townRegion[p.town] || Object.keys(REGIONS)[0]; 
-  fillTownSelect(p.town); 
-$('editPhone').value = p.phone || '';$('editBio').value = p.bio || '';
+  fillTownSelect(p.town); $('editName').value = p.name; 
+  $('editPhone').value = p.phone || '';$('editBio').value = p.bio || '';
   $('editAvatarFile').value = '';$('editAvatarPrev').src = avatarFor(currentUser.name, p.avatar); 
   show('editModal');
 }
@@ -997,19 +1042,50 @@ function fillTownSelect(sel) {
 }
 function closeEditProfileModal() { hide('editModal'); }
 
+async function renameUser(oldName, newName) {
+  const db = supabaseClient;
+  const old = cachedProfiles[oldName] || getProfile(oldName, currentUser.role);
+  const { error: e1 } = await db.from('profiles').upsert([{ ...old, name: newName }]);
+  if (e1) throw e1;
+  await db.from('items').update({ name: newName }).eq('name', oldName);
+  await db.from('follows').update({ follower_name: newName }).eq('follower_name', oldName);
+  await db.from('follows').update({ following_name: newName }).eq('following_name', oldName);
+  await db.from('notifications').update({ username: newName }).eq('username', oldName);
+  await db.from('notifications').update({ actor_name: newName }).eq('actor_name', oldName);
+  await db.from('profiles').delete().eq('name', oldName);
+  await db.auth.updateUser({ data: { display_name: newName } });
+}
+
 async function saveProfileChanges() {
-  const p = cachedProfiles[currentUser.name] || getProfile(currentUser.name, currentUser.role);
-  p.town = $('editTown').value; p.phone = $('editPhone').value.trim(); p.bio =$('editBio').value.trim();
+  const oldName = currentUser.name;
+  const newName = $('editName').value.trim();
+  if (!newName) { toast('အမည် ထည့်ပါ', 'error'); return; }
+  if (newName !== oldName && cachedProfiles[newName]) { toast('ဤအမည်ကို အခြားသူ အသုံးပြုပြီးသားဖြစ်သည်', 'error'); return; }
+
+  const base = cachedProfiles[oldName] || getProfile(oldName, currentUser.role);
+  const p = { ...base, name: oldName };
+  p.town = $('editTown').value; p.phone = $('editPhone').value.trim(); p.bio = $('editBio').value.trim();
   const f = $('editAvatarFile').files[0];
   if (f) p.avatar = await fileToDataURL(f, 900, .88);
 
   const { error } = await supabaseClient.from('profiles').upsert([p]);
-  if (error) {
-    toast('Profile သိမ်းဆည်းရာတွင် အမှားရှိသည်', 'error');
-  } else {
-    cachedProfiles[p.name] = p;
-    closeEditProfileModal(); updateAuthUI(); renderProfileWall(currentUser.name); toast('Profile သိမ်းဆည်းပြီးပါပြီ');
+  if (error) { toast('Profile သိမ်းဆည်းရာတွင် အမှားရှိသည်: ' + error.message, 'error'); return; }
+  cachedProfiles[oldName] = p;
+
+  if (newName !== oldName) {
+    try {
+      await renameUser(oldName, newName);
+      currentUser.name = newName; viewingProfileName = newName;
+      delete cachedProfiles[oldName];
+      cachedProfiles[newName] = { ...p, name: newName };
+      await fetchAllData();
+    } catch (err) {
+      console.error(err);
+      toast('အမည်ပြောင်း၍မရပါ: ' + (err.message || ''), 'error');
+      return;
+    }
   }
+  closeEditProfileModal(); updateAuthUI(); renderProfileWall(currentUser.name); toast('Profile သိမ်းဆည်းပြီးပါပြီ');
 }
 
 /* ================= AVATAR LIGHTBOX ================= */
@@ -1055,6 +1131,8 @@ document.addEventListener('keydown', e => {
 
 /* ================= INIT ================= */
 renderFilterChips();
+setImgMode('file');
+setInterval(() => { fetchAllData(); }, 300000);
 fetchAllData().then(async () => {
   const savedRole = localStorage.getItem('tempLoginRole');
   if (savedRole) { loginRole = savedRole; localStorage.removeItem('tempLoginRole'); }
