@@ -985,7 +985,7 @@ function openEditProfileModal() {
   $('editRegion').innerHTML = Object.keys(REGIONS).map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   $('editRegion').value = townRegion[p.town] || Object.keys(REGIONS)[0]; 
   fillTownSelect(p.town); 
-  $('editPhone').value = p.phone \vert{}\vert{} '';$('editBio').value = p.bio || '';
+$('editPhone').value = p.phone || '';$('editBio').value = p.bio || '';
   $('editAvatarFile').value = '';$('editAvatarPrev').src = avatarFor(currentUser.name, p.avatar); 
   show('editModal');
 }
