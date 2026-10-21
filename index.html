@@ -100,6 +100,8 @@
         </div>
         <button onclick="renderNotifications()" class="w-8 h-8 rounded-full bg-white text-slate-600 shadow flex items-center justify-center active:scale-90 transition" title="Refresh"><i class="fa-solid fa-rotate-right text-xs"></i></button>
       </div>
+      <!-- Notification တွင် ကြော်ငြာနေရာ ထည့်သွင်းခြင်း -->
+      <div id="adTopNotif"></div>
       <div id="notificationList" class="space-y-2"></div>
     </section>
 
@@ -119,6 +121,8 @@
           <h2 id="pfName" class="font-bold text-lg mt-1 text-slate-900"></h2>
           <span id="pfRole" class="inline-block text-[11px] font-bold px-3 py-0.5 rounded-full mt-0.5"></span>
           
+          <div id="pfFollowerCount" class="text-xs font-semibold text-slate-600 mt-1"></div>
+
           <div id="profileFollowArea" class="mt-2 hidden">
             <button id="profileFollowBtn" onclick="toggleFollowProfile(viewingProfileName)" class="text-xs px-4 py-1.5 rounded-full font-bold shadow transition"></button>
           </div>
@@ -164,6 +168,20 @@
         <h4 class="font-bold text-xs text-slate-700 mb-2 px-1"><i class="fa-solid fa-images text-red-500 mr-1"></i>Wall ပေါ်ရှိ ပစ္စည်းများ</h4>
         <div id="userWallList" class="grid grid-cols-2 gap-3"></div>
       </div>
+    </section>
+
+    <!-- FOLLOWING LIST VIEW (Sidebar မှ ဝင်ရန်) -->
+    <section id="followingListView" class="space-y-4 hidden">
+      <div class="flex items-center justify-between px-1">
+        <div>
+          <h2 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-user-group text-red-600 mr-1"></i>Following Accounts</h2>
+          <p class="text-[10px] text-slate-500">သင် Follow လုပ်ထားသော ဆိုင်/Agent များ</p>
+        </div>
+        <button onclick="switchView('feed')" class="text-xs bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full font-bold">Back</button>
+      </div>
+      <!-- Following section တွင် ကြော်ငြာနေရာ ထည့်သွင်းခြင်း -->
+      <div id="adTopFollowing"></div>
+      <div id="sidebarFollowingList" class="space-y-2"></div>
     </section>
 
     <!-- ABOUT VIEW -->
@@ -221,7 +239,9 @@
       <button onclick="toggleSidebar(false)" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="p-4 space-y-2 flex-1 overflow-y-auto">
-      <button onclick="toggleSidebar(false); switchView('about')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-circle-info text-blue-600 w-5"></i> About (အကြောင်းအရာ)</button>
+      <!-- (လိုက်နာမှုများ) နှင့် (အကြောင်းအရာ) စာသားများကို ဖယ်ရှားပြီး သက်ဆိုင်ရာခေါင်းစဉ်များ ထည့်ထားသည် -->
+      <button onclick="toggleSidebar(false); openFollowingList()" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-user-group text-red-600 w-5"></i> Following</button>
+      <button onclick="toggleSidebar(false); switchView('about')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-circle-info text-blue-600 w-5"></i> About</button>
       <a href="https://t.me/KimYiDo" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-brands fa-telegram text-[#229ED9] w-5"></i> ဆက်သွယ်ရန်</a>
     </div>
     <div class="p-4 border-t border-slate-100 text-center text-[10px] text-slate-400">
@@ -271,6 +291,13 @@
           <button id="modalVisitWallBtn" class="bg-red-100 text-red-700 text-[10px] px-3 py-2 rounded-xl font-bold shrink-0 active:scale-95"><i class="fa-solid fa-user mr-1"></i>Profile</button>
         </div>
         <div id="modalActionArea"></div>
+
+        <!-- COMMENT SECTION -->
+        <div class="border-t border-slate-100 pt-3 space-y-3">
+          <h5 class="font-bold text-xs text-slate-800"><i class="fa-solid fa-comments text-red-600 mr-1"></i>Comments</h5>
+          <div id="commentList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+          <div id="commentInputArea" class="space-y-2 pt-1"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -374,6 +401,7 @@ let cachedItems = { shopRequests: [], agentListings: [] };
 let cachedProfiles = {};
 let cachedFollows = []; 
 let cachedNotifications = []; 
+let cachedComments = [];
 
 const $ = id => document.getElementById(id);
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -475,39 +503,41 @@ function toggleSidebar(open) {
 /* ================= SUPABASE DATA SYNC & AUTH ================= */
 async function fetchAllData() {
   try {
-    const [itemsRes, profilesRes, followsRes, notifsRes] = await Promise.all([
+    const [itemsRes, profilesRes, followsRes, notifsRes, commentsRes] = await Promise.all([
       supabaseClient.from('items').select('*').order('timestamp', { ascending: false }),
       supabaseClient.from('profiles').select('*'),
       supabaseClient.from('follows').select('*'),
-      supabaseClient.from('notifications').select('*').order('timestamp', { ascending: false })
+      supabaseClient.from('notifications').select('*').order('timestamp', { ascending: false }),
+      supabaseClient.from('comments').select('*').order('timestamp', { ascending: true })
     ]);
     
     if (itemsRes.error) throw itemsRes.error;
     if (profilesRes.error) throw profilesRes.error;
     if (followsRes.error) console.warn(followsRes.error);
     if (notifsRes.error) console.warn(notifsRes.error);
+    if (commentsRes.error) console.warn(commentsRes.error);
 
-    const now = Date.now();
     const rawItems = itemsRes.data || [];
-    const expItems = rawItems.filter(i => now - Number(i.timestamp) >= LIFE * DAY);
-    if (expItems.length) supabaseClient.from('items').delete().in('id', expItems.map(i => i.id)).then(() => {}, () => {});
-    const allItems = rawItems.filter(i => now - Number(i.timestamp) < LIFE * DAY);
-    cachedItems.shopRequests = allItems.filter(i => i.key === 'shopRequests');
-    cachedItems.agentListings = allItems.filter(i => i.key === 'agentListings');
+    cachedItems.shopRequests = rawItems.filter(i => i.key === 'shopRequests');
+    cachedItems.agentListings = rawItems.filter(i => i.key === 'agentListings');
 
     cachedProfiles = {};
     (profilesRes.data || []).forEach(p => { cachedProfiles[p.name] = p; });
 
     cachedFollows = followsRes.data || [];
     const rawNotifs = notifsRes.data || [];
+    const now = Date.now();
     const expNotifs = rawNotifs.filter(n => now - Number(n.timestamp) >= NOTIF_LIFE * DAY);
     if (expNotifs.length) supabaseClient.from('notifications').delete().in('id', expNotifs.map(n => n.id)).then(() => {}, () => {});
     cachedNotifications = rawNotifs.filter(n => now - Number(n.timestamp) < NOTIF_LIFE * DAY);
+
+    cachedComments = commentsRes.data || [];
 
     updateNotificationBadge();
     applyFilters();
     if (activeView === 'profile' && viewingProfileName) renderProfileWall(viewingProfileName);
     if (activeView === 'notification') renderNotifications();
+    if (activeView === 'followingList') renderFollowingList();
   } catch (err) {
     console.error('Supabase fetch error:', err);
   }
@@ -526,6 +556,7 @@ function setupRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { fetchAllData(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => { fetchAllData(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => { fetchAllData(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => { fetchAllData(); })
     .subscribe();
 }
 
@@ -622,7 +653,7 @@ function adjustFeedForRole() {
   }
 }
 
-/* ================= FOLLOW SYSTEM ================= */
+/* ================= FOLLOW SYSTEM & SIDEBAR FOLLOWING LIST ================= */
 async function toggleFollowProfile(targetName) {
   if (!currentUser) { toast('ပထမဦးစွာ Login ဝင်ပါ', 'info'); openLogin(); return; }
   if (currentUser.name === targetName) return;
@@ -643,6 +674,45 @@ async function toggleFollowProfile(targetName) {
     }
   }
   renderProfileWall(targetName);
+  if (activeView === 'followingList') renderFollowingList();
+}
+
+function openFollowingList() {
+  if (!currentUser) { toast('ပထမဦးစွာ Login ဝင်ပါ', 'info'); openLogin(); return; }
+  switchView('followingList');
+  renderFollowingList();
+}
+
+function renderFollowingList() {
+  if (!currentUser) return;
+  const myFollowing = cachedFollows.filter(f => f.follower_name === currentUser.name);
+  const listEl = $('sidebarFollowingList');
+  
+  // Following section တွင် ကြော်ငြာနေရာ ထည့်သွင်းခြင်း
+  $('adTopFollowing').innerHTML = adHTML();
+
+  if (!myFollowing.length) {
+    listEl.innerHTML = emptyHTML('fa-user-slash', 'သင် Follow လုပ်ထားသော Account များ မရှိသေးပါ။');
+    return;
+  }
+
+  listEl.innerHTML = myFollowing.map(f => {
+    const targetName = f.following_name;
+    const p = getProfile(targetName);
+    return `
+      <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onclick="visitProfile('${esc(targetName)}')">
+          <img src="${avatarFor(targetName, p.avatar)}" class="w-12 h-12 rounded-full object-cover shrink-0 border border-slate-200" alt="">
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-slate-900 truncate">${esc(targetName)}</h4>
+            <span class="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full ${p.role === 'shop' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${p.role.toUpperCase()}</span>
+            <p class="text-[10px] text-slate-400 truncate mt-0.5"><i class="fa-solid fa-location-dot"></i> ${esc(p.town)}</p>
+          </div>
+        </div>
+        <button onclick="toggleFollowProfile('${esc(targetName)}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition shrink-0">Unfollow</button>
+      </div>
+    `;
+  }).join('');
 }
 
 function updateNotificationBadge() {
@@ -660,6 +730,9 @@ async function renderNotifications() {
     $('notificationList').innerHTML = emptyHTML('fa-bell-slash', 'Notification ကြည့်ရန် Login ဝင်ပါ');
     return;
   }
+  // Notification တွင် ကြော်ငြာပြသခြင်း
+  $('adTopNotif').innerHTML = adHTML();
+
   const myNotifs = cachedNotifications.filter(n => n.username === currentUser.name);
   $('notificationList').innerHTML = myNotifs.length ? myNotifs.map(n => `
     <div onclick="clickNotification('${n.id}', '${n.item_id}', '${n.actor_name}')" class="bg-white p-3 rounded-2xl shadow-sm border ${n.is_read ? 'border-slate-100 text-slate-600' : 'border-red-200 bg-red-50/30 font-semibold'} flex items-center gap-3 cursor-pointer">
@@ -689,16 +762,17 @@ async function clickNotification(notifId, itemId, actorName) {
 /* ================= NAV / FILTERS ================= */
 function switchView(view) {
   activeView = view;
-  ['feed', 'notification', 'profile', 'about'].forEach(v => $(v + 'View').classList.toggle('hidden', v !== view));
+  ['feed', 'notification', 'profile', 'about', 'followingList'].forEach(v => $(v + 'View').classList.toggle('hidden', v !== view));
   ['Feed', 'Notification', 'Profile'].forEach(n => {
     const btn = $('nav' + n + 'Btn');
     if (btn) btn.classList.toggle('active', n.toLowerCase() === view);
   });
-  $('filterBar').classList.toggle('hidden', view === 'profile' || view === 'notification' || view === 'about');
+  $('filterBar').classList.toggle('hidden', view === 'profile' || view === 'notification' || view === 'about' || view === 'followingList');
 
   if (view === 'feed') renderFeed();
   else if (view === 'notification') renderNotifications();
   else if (view === 'profile') renderProfileWall(viewingProfileName);
+  else if (view === 'followingList') renderFollowingList();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function goToMyProfile() {
@@ -709,12 +783,12 @@ function visitProfile(name) { viewingProfileName = name; switchView('profile'); 
 function applyFilters() { if (activeView === 'feed') renderFeed(); }
 
 function renderFilterChips() {
-  const rc = [['all', 'အားလုံး'], ...Object.keys(REGIONS).map(r => [r, r])];
+  const rc = [['all', 'အားလုံး'], ['following', 'Following'], ...Object.keys(REGIONS).map(r => [r, r])];
   const rEl = $('regionChips'), tEl =$('townChips');
   rEl.innerHTML = rc.map(([v, l]) =>
-    `<button data-region="${esc(v)}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition ${regionFilter === v ? 'bg-white text-red-700 shadow' : 'bg-white/20 text-white'}"><i class="fa-solid ${v === 'all' ? 'fa-globe' : 'fa-map'} mr-1 text-[9px]"></i>${esc(l)}</button>`).join('');
+    `<button data-region="${esc(v)}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition ${regionFilter === v ? 'bg-white text-red-700 shadow' : 'bg-white/20 text-white'}"><i class="fa-solid ${v === 'all' ? 'fa-globe' : v === 'following' ? 'fa-user-group' : 'fa-map'} mr-1 text-[9px]"></i>${esc(l)}</button>`).join('');
   rEl.querySelectorAll('button').forEach(b => b.onclick = () => { regionFilter = b.dataset.region; townFilter = 'all'; renderFilterChips(); applyFilters(); });
-  if (regionFilter === 'all') { tEl.style.display = 'none'; tEl.innerHTML = ''; return; }
+  if (regionFilter === 'all' || regionFilter === 'following') { tEl.style.display = 'none'; tEl.innerHTML = ''; return; }
   tEl.style.display = 'flex';
   tEl.innerHTML = ['all', ...REGIONS[regionFilter]].map(t =>
     `<button data-town="${esc(t)}" class="whitespace-nowrap text-[11px] font-semibold px-3 py-1 rounded-full transition ${townFilter === t ? 'bg-amber-100 text-red-800 shadow' : 'bg-black/20 text-white'}">${t === 'all' ? 'မြို့အားလုံး' : esc(t)}</button>`).join('');
@@ -761,7 +835,7 @@ function cardHTML(item, key, showOrder) {
       <div class="thumb-grad absolute inset-0"></div>
       <span class="absolute top-2 left-2 ${expiryTone(item.timestamp)} text-white text-[9px] font-bold px-2 py-0.5 rounded-full"><i class="fa-regular fa-clock mr-0.5"></i>${timeLeft(item.timestamp)}</span>
       ${ordered ? `<span class="absolute top-2 right-2 bg-orange-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-0.5"></i>မှာပြီး</span>` : ''}
-      <h3 class="absolute bottom-2 left-2.5 right-2.5 text-white font-bold text-xs line2 drop-shadow">${esc(item.item)}</h3>
+      <h3 class="absolute bottom-2 left-2.5 right-2.5 text-white font-extrabold text-sm line2 drop-shadow-md">${esc(item.item)}</h3>
     </div>
     <div class="flex items-center gap-1.5 px-2.5 py-2">
       <img src="${avatarFor(item.name, p.avatar)}" class="w-5 h-5 rounded-full object-cover" alt="">
@@ -778,11 +852,19 @@ function emptyHTML(icon, text) {
 
 function filteredList(key) {
   const q = $('globalSearchInput').value.trim().toLowerCase();
+  const followingNames = currentUser ? cachedFollows.filter(f => f.follower_name === currentUser.name).map(f => f.following_name) : [];
+
   return (cachedItems[key] || []).filter(i => {
     const p = getProfile(i.name);
-    return (townFilter === 'all' || p.town === townFilter) &&
-      (regionFilter === 'all' || townRegion[p.town] === regionFilter) &&
-      (i.item.toLowerCase().includes(q) || i.name.toLowerCase().includes(q));
+    
+    if (regionFilter === 'following') {
+      if (!currentUser || !followingNames.includes(i.name)) return false;
+    } else if (regionFilter !== 'all') {
+      if (townRegion[p.town] !== regionFilter) return false;
+      if (townFilter !== 'all' && p.town !== townFilter) return false;
+    }
+
+    return (i.item.toLowerCase().includes(q) || i.name.toLowerCase().includes(q));
   }).sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -817,15 +899,19 @@ document.addEventListener('click', e => {
   if (item) openDetailModal(item, item.key || key);
 });
 
-/* ================= DETAIL MODAL ================= */
+/* ================= DETAIL MODAL & COMMENTS ================= */
+let activeModalItem = null;
+
 function openDetailModal(item, key) {
+  activeModalItem = item;
   const p = getProfile(item.name, key === 'shopRequests' ? 'shop' : 'agent');
   $('modalAvatar').src = avatarFor(item.name, p.avatar); window._modalUser = item.name;
   $('modalUserName').textContent = `${item.name} (${p.role.toUpperCase()})`;
   $('modalUserTown').innerHTML = `<i class="fa-solid fa-location-dot text-red-500 mr-1"></i>${esc(p.town)}`;
   $('modalUserPhone').innerHTML = `<i class="fa-solid fa-phone mr-1"></i>${esc(p.phone || 'ဖုန်းမရှိသေးပါ')}`;
   $('modalUserPhone').href = phoneHref(p.phone);
-  $('modalVisitWallBtn').onclick = () => { closeDetailModal(); visitProfile(item.name); };$('modalItemImg').src = item.img;
+  $('modalVisitWallBtn').onclick = () => { closeDetailModal(); visitProfile(item.name); };
+  $('modalItemImg').src = item.img;
   $('modalItemTitle').textContent = item.item;
   $('modalItemCaption').textContent = item.caption || 'Caption မရှိပါ။';
   $('modalExpiry').textContent = timeLeft(item.timestamp);
@@ -843,9 +929,120 @@ function openDetailModal(item, key) {
   } else {
     area.innerHTML = `<button class="w-full hero text-white text-xs py-3 rounded-xl font-bold shadow active:scale-[.98]" onclick="document.getElementById('modalVisitWallBtn').click()"><i class="fa-solid fa-user mr-1"></i>ဤ Agent ၏ Profile Wall သို့သွားမည်</button>`;
   }
+
+  renderComments(item);
   show('detailModal');
 }
-function closeDetailModal() { hide('detailModal'); }
+function closeDetailModal() { activeModalItem = null; hide('detailModal'); }
+
+function renderComments(item) {
+  const listEl = $('commentList');
+  const inputEl = $('commentInputArea');
+  
+  if (!currentUser) {
+    listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-2">Comment ကြည့်ရန်/ရေးရန် Login ဝင်ပါ</p>`;
+    inputEl.innerHTML = '';
+    return;
+  }
+
+  const itemOwner = item.name;
+  const isOwner = currentUser.name === itemOwner;
+  const itemComments = cachedComments.filter(c => String(c.item_id) === String(item.id));
+
+  // Role စစ်ဆေးချက်: Demand & Demand (Shop & Shop) အချင်းချင်း သို့မဟုတ် Suppliers & Suppliers (Agent & Agent) အချင်းချင်း comment ပေး၍မရပါ
+  const isSameRole = currentUser.role === getProfile(itemOwner).role;
+  const canComment = !isSameRole && !isOwner;
+
+  let visibleComments = itemComments;
+  if (!isOwner) {
+    // Comment ပေးသူသည် အခြားသူများ၏ comment ကိုမမြင်ရ၊ မိမိပေးထားသော comment နှင့် ပိုင်ရှင်၏ reply ကိုသာ မြင်ရမည်
+    visibleComments = itemComments.filter(c => c.username === currentUser.name || c.reply_by === currentUser.name || c.is_public_reply);
+  }
+
+  listEl.innerHTML = visibleComments.length ? visibleComments.map(c => `
+    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs space-y-1.5">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-slate-800">${esc(c.username)}</span>
+        <span class="text-[9px] text-slate-400">${new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+      </div>
+      <p class="text-slate-600">${esc(c.text)}</p>
+      ${c.reply_text ? `
+        <div class="bg-red-50/70 border-l-2 border-red-500 p-2 rounded-r-lg mt-1 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-red-800 text-[11px]">${esc(c.reply_by)} (ပိုင်ရှင် Reply)</span>
+            <span class="text-[9px] text-slate-400">${new Date(c.reply_timestamp || c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          </div>
+          <p class="text-slate-700">${esc(c.reply_text)}</p>
+        </div>
+      ` : ''}
+      ${isOwner && !c.reply_text ? `
+        <div class="mt-2 pt-2 border-t border-slate-200 flex gap-1.5">
+          <input type="text" id="replyInput_${c.id}" placeholder="Reply ပြန်ရန်..." class="field text-[11px] py-1">
+          <button onclick="submitReply('${c.id}')" class="hero text-white text-[10px] px-3 py-1 rounded-lg font-bold shrink-0">Reply</button>
+        </div>
+      ` : ''}
+    </div>
+  `).join('') : `<p class="text-xs text-slate-400 text-center py-2">Comment များ မရှိသေးပါ။</p>`;
+
+  if (canComment) {
+    inputEl.innerHTML = `
+      <div class="flex gap-1.5">
+        <input type="text" id="newCommentInput" placeholder="Comment ရေးရန်..." class="field text-xs">
+        <button onclick="submitComment('${item.id}')" class="hero text-white text-xs px-4 py-2 rounded-xl font-bold shrink-0">ပို့မည်</button>
+      </div>
+    `;
+  } else if (isSameRole) {
+    inputEl.innerHTML = `<p class="text-[10px] text-rose-600 text-center font-semibold">အမျိုးအစားတူ (Shop/Agent အချင်းချင်း) comment ပေး၍မရပါ</p>`;
+  } else {
+    inputEl.innerHTML = '';
+  }
+}
+
+async function submitComment(itemId) {
+  const input = $('newCommentInput');
+  if (!input || !input.value.trim()) return;
+  const text = input.value.trim();
+
+  const newComment = {
+    item_id: String(itemId),
+    username: currentUser.name,
+    text: text,
+    timestamp: Date.now(),
+    reply_text: null,
+    reply_by: null,
+    reply_timestamp: null,
+    is_public_reply: true
+  };
+
+  const { error } = await supabaseClient.from('comments').insert([newComment]);
+  if (error) {
+    toast('Comment ပို့၍မရပါ', 'error');
+  } else {
+    toast('Comment တင်ပြီးပါပြီ');
+    await fetchAllData();
+    if (activeModalItem) renderComments(activeModalItem);
+  }
+}
+
+async function submitReply(commentId) {
+  const input = $(`replyInput_${commentId}`);
+  if (!input || !input.value.trim()) return;
+  const replyText = input.value.trim();
+
+  const { error } = await supabaseClient.from('comments').update({
+    reply_text: replyText,
+    reply_by: currentUser.name,
+    reply_timestamp: Date.now()
+  }).eq('id', commentId);
+
+  if (error) {
+    toast('Reply ပို့၍မရပါ', 'error');
+  } else {
+    toast('Reply တင်ပြီးပါပြီ');
+    await fetchAllData();
+    if (activeModalItem) renderComments(activeModalItem);
+  }
+}
 
 async function toggleOrder(key, item) {
   if (!currentUser || currentUser.role !== 'agent') { toast('Agent အကောင့်ဖြင့်သာ မှာယူနိုင်ပါသည်', 'error'); return; }
@@ -868,6 +1065,9 @@ function renderProfileWall(name) {
   const isShop = p.role === 'shop';
   $('pfRole').textContent = p.role.toUpperCase();$('pfRole').className = 'inline-block text-[11px] font-bold px-3 py-0.5 rounded-full mt-0.5 ' + (isShop ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700');
   
+  const followerCount = cachedFollows.filter(f => f.following_name === name).length;
+  $('pfFollowerCount').textContent = `Followers: ${followerCount} ဦး`;
+
   const followArea = $('profileFollowArea');
   const own = currentUser && currentUser.name === name;
   if (!own && currentUser) {
@@ -904,7 +1104,7 @@ function renderProfileWall(name) {
         <img src="${item.img}" loading="lazy" class="w-full h-full object-cover" alt="">
         <div class="thumb-grad absolute inset-0"></div>
         <span class="absolute top-2 left-2 ${expiryTone(item.timestamp)} text-white text-[9px] font-bold px-2 py-0.5 rounded-full">${timeLeft(item.timestamp)}</span>
-        <h3 class="absolute bottom-2 left-2.5 right-2.5 text-white font-bold text-xs line2">${esc(item.item)}</h3>
+        <h3 class="absolute bottom-2 left-2.5 right-2.5 text-white font-extrabold text-sm line2 drop-shadow-md">${esc(item.item)}</h3>
       </div>
       ${own ? `<div class="flex gap-1.5 p-2">
         <button data-act="edit" data-id="${item.id}" class="flex-1 bg-slate-100 text-slate-700 text-[10px] font-bold py-1.5 rounded-lg"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
@@ -1052,6 +1252,8 @@ async function renameUser(oldName, newName) {
   await db.from('follows').update({ following_name: newName }).eq('following_name', oldName);
   await db.from('notifications').update({ username: newName }).eq('username', oldName);
   await db.from('notifications').update({ actor_name: newName }).eq('actor_name', oldName);
+  await db.from('comments').update({ username: newName }).eq('username', oldName);
+  await db.from('comments').update({ reply_by: newName }).eq('reply_by', oldName);
   await db.from('profiles').delete().eq('name', oldName);
   await db.auth.updateUser({ data: { display_name: newName } });
 }
