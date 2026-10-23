@@ -146,7 +146,7 @@
         </div>
         <form id="uploadForm" class="space-y-2.5">
           <input type="text" id="itemName" placeholder="ပစ္စည်းအမည်" required class="field">
-          <textarea id="itemCaption" placeholder="Caption (ဖော်ပြချက်/အသေးစိတ်)" rows="2" class="field"></textarea>
+          <textarea id="itemCaption" placeholder="Caption (ဖော်ပြချက်/အသေးစိတ်)" rows="3" class="field placeholder:text-slate-500 font-medium text-slate-800"></textarea>
           <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
             <button type="button" id="imgModeFile" onclick="setImgMode('file')" class="py-1.5 rounded-lg"><i class="fa-solid fa-image mr-1"></i>ဖုန်းထဲမှ ပုံ</button>
             <button type="button" id="imgModeUrl" onclick="setImgMode('url')" class="py-1.5 rounded-lg"><i class="fa-solid fa-link mr-1"></i>URL ဖြင့်</button>
@@ -992,7 +992,7 @@ function renderComments(item) {
       </div>
     `;
   } else if (isSameRole) {
-    inputEl.innerHTML = `<p class="text-[10px] text-rose-600 text-center font-semibold">အမျိုးအစားတူ (Shop/Agent အချင်းချင်း) comment ပေး၍မရပါ</p>`;
+    inputEl.innerHTML = ``;
   } else {
     inputEl.innerHTML = '';
   }
