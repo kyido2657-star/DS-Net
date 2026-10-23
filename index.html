@@ -8,6 +8,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -37,6 +39,13 @@
   .refresh-btn { position:relative; z-index: 40; }
   .refresh-btn.has-new::after { content:''; position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:99px; background:#f59e0b; border:2px solid #fff; animation: pulse 1.2s infinite; }
   @keyframes pulse { 50% { transform: scale(1.35); opacity:.7 } }
+  /* ဖတ်ရလွယ်အောင် စာသားများ ပိုထင်ရှားစေခြင်း (လူကြီးများအတွက်) */
+  .field { font-size:.9rem; color:#0f172a; }
+  .field::placeholder { color:#475569; opacity:1; font-weight:500; }
+  #uploadForm .field { font-size:.95rem; padding:.7rem .85rem; border-color:#cbd5e1; }
+  #fileBox { font-size:.8rem !important; color:#334155 !important; }
+  #fileNameLabel { color:#475569; }
+  .nchip { white-space:nowrap; font-size:11px; font-weight:700; padding:.35rem .8rem; border-radius:999px; transition:.15s; }
 </style>
 </head>
 <body class="text-slate-800">
@@ -101,6 +110,7 @@
         <button onclick="renderNotifications()" class="w-8 h-8 rounded-full bg-white text-slate-600 shadow flex items-center justify-center active:scale-90 transition" title="Refresh"><i class="fa-solid fa-rotate-right text-xs"></i></button>
       </div>
       <!-- Notification တွင် ကြော်ငြာနေရာ ထည့်သွင်းခြင်း -->
+      <div id="notifFilterChips" class="flex gap-1.5 overflow-x-auto chip"></div>
       <div id="adTopNotif"></div>
       <div id="notificationList" class="space-y-2"></div>
     </section>
@@ -131,6 +141,10 @@
             <span id="pfTown" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full"></span>
             <a id="pfPhone" class="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full font-medium"></a>
           </div>
+          <div class="flex justify-center gap-2 mt-3">
+            <button onclick="copyProfileLink(viewingProfileName)" class="bg-slate-100 text-slate-700 text-[11px] font-bold px-3.5 py-1.5 rounded-full active:scale-95"><i class="fa-solid fa-link mr-1"></i>Link ကူးမည်</button>
+            <button onclick="openQr(viewingProfileName)" class="bg-slate-100 text-slate-700 text-[11px] font-bold px-3.5 py-1.5 rounded-full active:scale-95"><i class="fa-solid fa-qrcode mr-1"></i>QR Code</button>
+          </div>
           <p id="pfBio" class="text-xs text-slate-500 mt-3 bg-red-50/60 rounded-2xl px-4 py-3"></p>
           <div id="editProfileBtnArea" class="mt-3 hidden">
             <button onclick="openEditProfileModal()" class="hero text-white text-xs px-5 py-2 rounded-full font-bold shadow active:scale-95"><i class="fa-solid fa-pen-to-square mr-1"></i>Edit Profile</button>
@@ -146,7 +160,7 @@
         </div>
         <form id="uploadForm" class="space-y-2.5">
           <input type="text" id="itemName" placeholder="ပစ္စည်းအမည်" required class="field">
-          <textarea id="itemCaption" placeholder="Caption (ဖော်ပြချက်/အသေးစိတ်)" rows="3" class="field placeholder:text-slate-500 font-medium text-slate-800"></textarea>
+          <textarea id="itemCaption" placeholder="Caption (ဖော်ပြချက်/အသေးစိတ်)" rows="2" class="field"></textarea>
           <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
             <button type="button" id="imgModeFile" onclick="setImgMode('file')" class="py-1.5 rounded-lg"><i class="fa-solid fa-image mr-1"></i>ဖုန်းထဲမှ ပုံ</button>
             <button type="button" id="imgModeUrl" onclick="setImgMode('url')" class="py-1.5 rounded-lg"><i class="fa-solid fa-link mr-1"></i>URL ဖြင့်</button>
@@ -181,6 +195,13 @@
       </div>
       <!-- Following section တွင် ကြော်ငြာနေရာ ထည့်သွင်းခြင်း -->
       <div id="adTopFollowing"></div>
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="followSearchInput" oninput="renderFollowingList()" placeholder="Following ထဲမှ အမည်/မြို့ ရှာရန်..." class="field" style="padding-left:2rem">
+        </div>
+        <button onclick="openScan()" class="hero text-white w-11 rounded-xl shadow active:scale-95 shrink-0" title="QR Scan" aria-label="QR Scan"><i class="fa-solid fa-qrcode"></i></button>
+      </div>
       <div id="sidebarFollowingList" class="space-y-2"></div>
     </section>
 
@@ -241,6 +262,7 @@
     <div class="p-4 space-y-2 flex-1 overflow-y-auto">
       <!-- (လိုက်နာမှုများ) နှင့် (အကြောင်းအရာ) စာသားများကို ဖယ်ရှားပြီး သက်ဆိုင်ရာခေါင်းစဉ်များ ထည့်ထားသည် -->
       <button onclick="toggleSidebar(false); openFollowingList()" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-user-group text-red-600 w-5"></i> Following</button>
+      <button onclick="toggleSidebar(false); openScan()" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-qrcode text-slate-800 w-5"></i> QR Scan (Account ရှာရန်)</button>
       <button onclick="toggleSidebar(false); switchView('about')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-solid fa-circle-info text-blue-600 w-5"></i> About</button>
       <a href="https://t.me/KimYiDo" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-red-50 text-slate-700 font-semibold text-xs transition"><i class="fa-brands fa-telegram text-[#229ED9] w-5"></i> ဆက်သွယ်ရန်</a>
     </div>
@@ -362,6 +384,37 @@
       <button onclick="resetZoom()" class="px-4 h-11 rounded-full bg-white/15 text-white text-xs font-bold"><span id="lbPct">100%</span></button>
       <button onclick="zoomBy(0.5)" class="w-11 h-11 rounded-full bg-white/15 text-white"><i class="fa-solid fa-plus"></i></button>
       <button id="lbChange" onclick="closeLightbox();openEditProfileModal()" class="hidden px-4 h-11 rounded-full hero text-white text-xs font-bold"><i class="fa-solid fa-camera mr-1"></i>ပုံပြောင်းမည်</button>
+    </div>
+  </div>
+
+  <div id="qrModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[65] hidden items-end sm:items-center justify-center fade" onclick="if(event.target===this)closeQr()">
+    <div class="sheet bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3 text-center">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm"><i class="fa-solid fa-qrcode text-red-600 mr-1"></i>Account QR Code</h3>
+        <button onclick="closeQr()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p id="qrName" class="font-bold text-base text-slate-900"></p>
+      <div id="qrBox" class="mx-auto bg-white p-3 rounded-2xl border border-slate-200 w-fit"></div>
+      <p id="qrLinkText" class="text-[10px] text-slate-400 break-all"></p>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="copyProfileLink(qrProfileName)" class="bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold text-xs"><i class="fa-solid fa-link mr-1"></i>Link ကူးမည်</button>
+        <button onclick="downloadQr()" class="hero text-white py-2.5 rounded-xl font-bold text-xs"><i class="fa-solid fa-download mr-1"></i>QR သိမ်းမည်</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scanModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[65] hidden items-end sm:items-center justify-center fade">
+    <div class="sheet bg-white w-full max-w-md rounded-t-3xl p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm"><i class="fa-solid fa-camera text-red-600 mr-1"></i>QR Scan ဖတ်ရန်</h3>
+        <button onclick="closeScan()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <video id="scanVideo" playsinline muted class="w-full aspect-square object-cover rounded-2xl bg-black"></video>
+      <canvas id="scanCanvas" class="hidden"></canvas>
+      <p id="scanStatus" class="text-xs text-slate-600 text-center font-semibold"></p>
+      <label class="block w-full text-center bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-image mr-1"></i>ဓာတ်ပုံထဲက QR ကို ဖတ်မည်
+        <input type="file" id="scanFile" accept="image/*" class="hidden">
+      </label>
     </div>
   </div>
 
@@ -685,10 +738,10 @@ function openFollowingList() {
 
 function renderFollowingList() {
   if (!currentUser) return;
+  const q = ($('followSearchInput') ? $('followSearchInput').value : '').trim().toLowerCase();
   const myFollowing = cachedFollows.filter(f => f.follower_name === currentUser.name);
   const listEl = $('sidebarFollowingList');
-  
-  // Following section တွင် ကြော်ငြာနေရာ ထည့်သွင်းခြင်း
+
   $('adTopFollowing').innerHTML = adHTML();
 
   if (!myFollowing.length) {
@@ -696,7 +749,17 @@ function renderFollowingList() {
     return;
   }
 
-  listEl.innerHTML = myFollowing.map(f => {
+  const shown = myFollowing.filter(f => {
+    if (!q) return true;
+    const p = getProfile(f.following_name);
+    return f.following_name.toLowerCase().includes(q) || String(p.town || '').toLowerCase().includes(q);
+  });
+  if (!shown.length) {
+    listEl.innerHTML = emptyHTML('fa-magnifying-glass', 'ရှာဖွေမှုနှင့် ကိုက်ညီသော Account မတွေ့ပါ။');
+    return;
+  }
+
+  listEl.innerHTML = shown.map(f => {
     const targetName = f.following_name;
     const p = getProfile(targetName);
     return `
@@ -725,27 +788,69 @@ function updateNotificationBadge() {
   }
 }
 
+const CM = '__c__', RM = '__r__';
+let notifFilter = 'all';
+function notifType(n) { const t = String(n.item_name || ''); return (t.startsWith(CM) || t.startsWith(RM)) ? 'comment' : 'following'; }
+function notifItemName(n) { return String(n.item_name || '').replace(/^__[cr]__/, ''); }
+function setNotifFilter(f) { notifFilter = f; renderNotifications(); }
+
+async function notifyComment(item, toUser, kind) {
+  if (!currentUser || !item || !toUser || toUser === currentUser.name) return;
+  await supabaseClient.from('notifications').insert([{
+    username: toUser,
+    actor_name: currentUser.name,
+    item_id: item.id,
+    item_name: (kind === 'reply' ? RM : CM) + item.item,
+    item_img: item.img,
+    timestamp: Date.now(),
+    is_read: false
+  }]);
+}
+
 async function renderNotifications() {
+  const chipsEl = $('notifFilterChips');
   if (!currentUser) {
+    chipsEl.innerHTML = '';
     $('notificationList').innerHTML = emptyHTML('fa-bell-slash', 'Notification ကြည့်ရန် Login ဝင်ပါ');
     return;
   }
-  // Notification တွင် ကြော်ငြာပြသခြင်း
   $('adTopNotif').innerHTML = adHTML();
 
-  const myNotifs = cachedNotifications.filter(n => n.username === currentUser.name);
-  $('notificationList').innerHTML = myNotifs.length ? myNotifs.map(n => `
-    <div onclick="clickNotification('${n.id}', '${n.item_id}', '${n.actor_name}')" class="bg-white p-3 rounded-2xl shadow-sm border ${n.is_read ? 'border-slate-100 text-slate-600' : 'border-red-200 bg-red-50/30 font-semibold'} flex items-center gap-3 cursor-pointer">
-      <img src="${avatarFor(n.actor_name, getProfile(n.actor_name).avatar)}" class="w-10 h-10 rounded-full object-cover shrink-0" alt="">
-      <div class="flex-1 text-xs">
-        <p><span class="font-bold text-slate-900">${esc(n.actor_name)}</span> က ပစ္စည်းအသစ် တင်လိုက်ပါပြီ: <span class="text-red-600">${esc(n.item_name)}</span></p>
-        <p class="text-[10px] text-slate-400 mt-0.5">${new Date(n.timestamp).toLocaleString()}</p>
-      </div>
-      ${n.item_img ? `<img src="${n.item_img}" class="w-12 h-12 rounded-xl object-cover shrink-0" alt="">` : ''}
-    </div>`).join('') : emptyHTML('fa-bell-slash', 'Notification အသစ်များ မရှိသေးပါ။');
+  const mine = cachedNotifications.filter(n => n.username === currentUser.name);
+  const cnt = {
+    all: mine.length,
+    following: mine.filter(n => notifType(n) === 'following').length,
+    comment: mine.filter(n => notifType(n) === 'comment').length
+  };
+  const unr = f => mine.filter(n => !n.is_read && (f === 'all' || notifType(n) === f)).length;
+  chipsEl.innerHTML = [['all', 'All noti', 'fa-bell'], ['following', 'Following noti', 'fa-user-group'], ['comment', 'Comment noti', 'fa-comment']].map(([v, l, ic]) =>
+    `<button onclick="setNotifFilter('${v}')" class="nchip ${notifFilter === v ? 'hero text-white shadow' : 'bg-white text-slate-600 border border-slate-200'}"><i class="fa-solid ${ic} mr-1 text-[10px]"></i>${l} (${cnt[v]})${unr(v) ? ' <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 align-middle"></span>' : ''}</button>`).join('');
 
-  await supabaseClient.from('notifications').update({ is_read: true }).eq('username', currentUser.name).eq('is_read', false);
-  updateNotificationBadge();
+  const list = notifFilter === 'all' ? mine : mine.filter(n => notifType(n) === notifFilter);
+  const emptyMsg = notifFilter === 'comment' ? 'Comment notification မရှိသေးပါ။' : notifFilter === 'following' ? 'Following notification မရှိသေးပါ။' : 'Notification အသစ်များ မရှိသေးပါ။';
+
+  $('notificationList').innerHTML = list.length ? list.map(n => {
+    const t = String(n.item_name || '');
+    const isReply = t.startsWith(RM), isCmt = t.startsWith(CM);
+    const msg = isReply ? 'က သင်၏ comment ကို Reply ပြန်လိုက်ပါသည်:' : isCmt ? 'က သင့်ပစ္စည်းတွင် Comment ပေးလိုက်ပါသည်:' : 'က ပစ္စည်းအသစ် တင်လိုက်ပါပြီ:';
+    const icon = (isReply || isCmt) ? '<i class="fa-solid fa-comment text-sky-500 mr-1"></i>' : '<i class="fa-solid fa-box text-red-500 mr-1"></i>';
+    return `
+    <div onclick="clickNotification('${esc(n.id)}', '${esc(n.item_id)}', '${esc(n.actor_name)}')" class="bg-white p-3 rounded-2xl shadow-sm border ${n.is_read ? 'border-slate-100 text-slate-600' : 'border-red-200 bg-red-50/30 font-semibold'} flex items-center gap-3 cursor-pointer">
+      <img src="${avatarFor(n.actor_name, getProfile(n.actor_name).avatar)}" class="w-10 h-10 rounded-full object-cover shrink-0" alt="">
+      <div class="flex-1 text-xs min-w-0">
+        <p>${icon}<span class="font-bold text-slate-900">${esc(n.actor_name)}</span> ${msg} <span class="text-red-600">${esc(notifItemName(n))}</span></p>
+        <p class="text-[10px] text-slate-400 mt-0.5">${new Date(Number(n.timestamp)).toLocaleString()}</p>
+      </div>
+      ${n.item_img ? `<img src="${esc(n.item_img)}" class="w-12 h-12 rounded-xl object-cover shrink-0" alt="">` : ''}
+    </div>`;
+  }).join('') : emptyHTML('fa-bell-slash', emptyMsg);
+
+  const unreadIds = list.filter(n => !n.is_read).map(n => n.id);
+  if (unreadIds.length) {
+    await supabaseClient.from('notifications').update({ is_read: true }).in('id', unreadIds);
+    list.forEach(n => { n.is_read = true; });
+    updateNotificationBadge();
+  }
 }
 
 async function clickNotification(notifId, itemId, actorName) {
@@ -991,8 +1096,6 @@ function renderComments(item) {
         <button onclick="submitComment('${item.id}')" class="hero text-white text-xs px-4 py-2 rounded-xl font-bold shrink-0">ပို့မည်</button>
       </div>
     `;
-  } else if (isSameRole) {
-    inputEl.innerHTML = ``;
   } else {
     inputEl.innerHTML = '';
   }
@@ -1019,6 +1122,7 @@ async function submitComment(itemId) {
     toast('Comment ပို့၍မရပါ', 'error');
   } else {
     toast('Comment တင်ပြီးပါပြီ');
+    if (activeModalItem) notifyComment(activeModalItem, activeModalItem.name, 'comment');
     await fetchAllData();
     if (activeModalItem) renderComments(activeModalItem);
   }
@@ -1028,6 +1132,7 @@ async function submitReply(commentId) {
   const input = $(`replyInput_${commentId}`);
   if (!input || !input.value.trim()) return;
   const replyText = input.value.trim();
+  const target = cachedComments.find(c => String(c.id) === String(commentId));
 
   const { error } = await supabaseClient.from('comments').update({
     reply_text: replyText,
@@ -1039,6 +1144,7 @@ async function submitReply(commentId) {
     toast('Reply ပို့၍မရပါ', 'error');
   } else {
     toast('Reply တင်ပြီးပါပြီ');
+    if (activeModalItem && target) notifyComment(activeModalItem, target.username, 'reply');
     await fetchAllData();
     if (activeModalItem) renderComments(activeModalItem);
   }
@@ -1290,6 +1396,124 @@ async function saveProfileChanges() {
   closeEditProfileModal(); updateAuthUI(); renderProfileWall(currentUser.name); toast('Profile သိမ်းဆည်းပြီးပါပြီ');
 }
 
+/* ================= PROFILE LINK / QR / SCAN ================= */
+let qrProfileName = null, scanStream = null, scanRaf = null;
+function profileLink(name) { return location.href.split(/[?#]/)[0] + '?u=' + encodeURIComponent(name); }
+
+async function copyProfileLink(name) {
+  if (!name) return;
+  const link = profileLink(name);
+  try {
+    await navigator.clipboard.writeText(link);
+  } catch (e) {
+    const t = document.createElement('textarea'); t.value = link; t.style.position = 'fixed'; t.style.opacity = 0;
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } catch (_) {}
+    t.remove();
+  }
+  toast('Link ကူးပြီးပါပြီ');
+}
+
+function openQr(name) {
+  if (!name) return;
+  if (!window.QRCode) { toast('QR library ဖွင့်မရပါ၊ အင်တာနက်စစ်ပါ', 'error'); return; }
+  qrProfileName = name;
+  $('qrName').textContent = name;
+  $('qrLinkText').textContent = profileLink(name);
+  const box = $('qrBox'); box.innerHTML = '';
+  new QRCode(box, { text: profileLink(name), width: 240, height: 240, colorDark: '#7f1d1d', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  show('qrModal');
+}
+function closeQr() { hide('qrModal'); }
+
+function downloadQr() {
+  const src = $('qrBox').querySelector('canvas');
+  if (!src) { toast('QR သိမ်း၍မရပါ', 'error'); return; }
+  const c = document.createElement('canvas'); c.width = 340; c.height = 400;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(src, 30, 20, 280, 280);
+  g.fillStyle = '#7f1d1d'; g.textAlign = 'center';
+  g.font = 'bold 22px "Noto Sans Myanmar", sans-serif';
+  g.fillText(qrProfileName, 170, 340, 310);
+  g.fillStyle = '#64748b'; g.font = '14px sans-serif';
+  g.fillText('DS Net', 170, 372);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = 'DSNet-' + qrProfileName.replace(/[^\wက-႟-]+/g, '_') + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('QR ပုံ သိမ်းပြီးပါပြီ');
+}
+
+function parseProfileFromText(t) {
+  t = String(t || '').trim();
+  try { const n = new URL(t).searchParams.get('u'); if (n) return n; } catch (e) {}
+  return t;
+}
+function handleScanResult(text) {
+  stopScan();
+  const name = parseProfileFromText(text);
+  if (cachedProfiles[name]) {
+    closeScan(); visitProfile(name); toast('Account တွေ့ပါပြီ');
+  } else {
+    toast('ဤ QR ဖြင့် Account မတွေ့ပါ', 'error');
+    setTimeout(() => { if (!$('scanModal').classList.contains('hidden')) startCamera(); }, 1200);
+  }
+}
+async function startCamera() {
+  const v = $('scanVideo');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    $('scanStatus').textContent = 'Camera မရနိုင်ပါ၊ ဓာတ်ပုံဖြင့် ဖတ်ပါ'; return;
+  }
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    v.srcObject = scanStream; await v.play();
+    $('scanStatus').textContent = 'QR Code ကို Camera ရှေ့တွင် ထားပါ...';
+    scanLoop();
+  } catch (e) {
+    $('scanStatus').textContent = 'Camera ခွင့်ပြုချက် မရပါ၊ ဓာတ်ပုံဖြင့် ဖတ်ပါ';
+  }
+}
+function scanLoop() {
+  if (!scanStream) return;
+  const v = $('scanVideo'), cv = $('scanCanvas');
+  if (v.readyState === v.HAVE_ENOUGH_DATA && window.jsQR) {
+    cv.width = v.videoWidth; cv.height = v.videoHeight;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(v, 0, 0, cv.width, cv.height);
+    const d = g.getImageData(0, 0, cv.width, cv.height);
+    const r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
+    if (r && r.data) { handleScanResult(r.data); return; }
+  }
+  scanRaf = requestAnimationFrame(scanLoop);
+}
+function stopScan() {
+  if (scanRaf) cancelAnimationFrame(scanRaf); scanRaf = null;
+  if (scanStream) scanStream.getTracks().forEach(t => t.stop());
+  scanStream = null;
+  const v = $('scanVideo'); if (v) v.srcObject = null;
+}
+function openScan() { show('scanModal'); $('scanStatus').textContent = 'Camera ဖွင့်နေသည်...'; startCamera(); }
+function closeScan() { stopScan(); hide('scanModal'); }
+
+$('scanFile').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    const s = Math.min(1, 1200 / Math.max(img.width, img.height));
+    const cv = $('scanCanvas'); cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, cv.width, cv.height);
+    const d = g.getImageData(0, 0, cv.width, cv.height);
+    const r = window.jsQR && jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' });
+    URL.revokeObjectURL(img.src);
+    if (r && r.data) handleScanResult(r.data); else toast('ပုံထဲတွင် QR မတွေ့ပါ', 'error');
+  };
+  img.onerror = () => toast('ပုံဖတ်၍မရပါ', 'error');
+  img.src = URL.createObjectURL(f);
+});
+
 /* ================= AVATAR LIGHTBOX ================= */
 let lb = { s: 1, x: 0, y: 0 }, ptrs = new Map(), pinch0 = 0, pinchS = 1;
 function applyLb() {
@@ -1328,7 +1552,7 @@ function closeLightbox() { hide('lightbox'); }
 })();
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeDetailModal(); closeLogin(); closeEditItemModal(); closeEditProfileModal(); closeLightbox(); toggleSidebar(false); }
+  if (e.key === 'Escape') { closeDetailModal(); closeLogin(); closeEditItemModal(); closeEditProfileModal(); closeLightbox(); toggleSidebar(false); closeQr(); closeScan(); }
 });
 
 /* ================= INIT ================= */
@@ -1342,6 +1566,8 @@ fetchAllData().then(async () => {
   await checkUserSession();
   setupRealtime();
   switchView('feed');
+  const deep = new URLSearchParams(location.search).get('u');
+  if (deep) { if (cachedProfiles[deep]) visitProfile(deep); else toast('Link ထဲက Account မတွေ့ပါ', 'error'); }
 });
 </script>
 </body>
